@@ -1,105 +1,87 @@
--- 1) Создайте таблицу "Hospital_Facility" с полями "ID", "NAME", "TYPE".
-CREATE TABLE Hospital_Facility (
-    Facility_Id serial NOT NULL PRIMARY KEY,
-    Facility_Name VARCHAR(100) NOT NULL,
-    Facility_Type VARCHAR(50) NOT NULL,
-    Bed_Count INTEGER DEFAULT 0,
-    Established_Date DATE,
-    Address VARCHAR(200)
-);
+!pip install ipython-sql
 
--- 2) Вставьте 5 записей о больничных объектах
-INSERT INTO Hospital_Facility (Facility_Id, Facility_Name, Facility_Type, Bed_Count, Established_Date, Address)
-VALUES
-(1, 'City General Hospital', 'General', 250, '1985-05-15', '123 Main Street'),
-(2, 'Children''s Medical Center', 'Pediatric', 150, '1992-11-20', '456 Elm Avenue'),
-(3, 'Central Trauma Unit', 'Trauma', 120, '2001-03-08', '789 Oak Boulevard'),
-(4, 'Northwest Psychiatric', 'Psychiatric', 80, '1978-09-30', '321 Pine Road'),
-(5, 'Riverside Clinic', 'Outpatient', 0, '2010-07-12', '654 Maple Lane');
-
--- 3) Получите информацию о больнице с ID=4
-
-SELECT * FROM Hospital_Facility WHERE Facility_Id = 4;
-
--- 4) Обновите количество коек в больнице с ID=3
-
-UPDATE Hospital_Facility 
-SET Bed_Count = 140 
-WHERE Facility_Id = 3;
-
--- 5) Создайте линейный график для отображения трендов по количеству коек в больницах
+-- Создаем бд
 import psycopg2
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from datetime import datetime
+from psycopg2 import sql
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
--- Параметры подключения к PostgreSQL
-conn_params = {
-    "host": "localhost",  
-    "database": "medical_db",
+server_params = {
+    "host": "localhost",
     "user": "postgres",
-    "password": "1",
+    "password": "1234", 
     "port": "5432" 
 }
 
-query = """
-SELECT 
-    Established_Date,
-    SUM(Bed_Count) AS total_beds
-FROM 
-    Hospital_Facility
-WHERE
-    Bed_Count > 0 
-GROUP BY 
-    Established_Date
-ORDER BY 
-    Established_Date;
-"""
-
 try:
-
-    conn = psycopg2.connect(**conn_params)
-    cursor = conn.cursor()
+  
+    conn = psycopg2.connect(**server_params)
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)  
     
-    cursor.execute(query)
-    data = cursor.fetchall()
-    
-    dates = [row[0] for row in data]
-    beds = [row[1] for row in data]
-    
-    plt.figure(figsize=(12, 6))
-    
-    plt.plot(dates, beds, marker='o', linestyle='-', color='#2c7bb6', 
-             linewidth=2.5, markersize=8, label='Количество коек')
-    
-    plt.title('Динамика количества коек в больницах по годам основания', 
-              fontsize=14, pad=20)
-    plt.xlabel('Год основания', fontsize=12)
-    plt.ylabel('Количество коек', fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.6)
-    
-    ax = plt.gca()
-    ax.xaxis.set_major_locator(mdates.YearLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    plt.xticks(rotation=45)
-    
-    for date, bed in zip(dates, beds):
-        plt.annotate(f'{bed}', xy=(date, bed), xytext=(0, 10),
-                     textcoords='offset points', ha='center', fontsize=10)
-    
-    plt.legend(loc='upper left')
-    
-    plt.tight_layout()
-    
-    plt.savefig('hospital_beds_trend.png', dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    print("График успешно сохранен как 'hospital_beds_trend.png'")
-
-except Exception as e:
-    print(f"Ошибка: {e}")
-
+    with conn.cursor() as cur:
+        
+        cur.execute("SELECT 1 FROM pg_database WHERE datname='medical__db'")
+        exists = cur.fetchone()
+        
+        if not exists:
+          
+            cur.execute(sql.SQL("CREATE DATABASE medical__db"))
+            print("База данных medical__db успешно создана")
+        else:
+            print("База данных medical__db уже существует")
+            
+except psycopg2.Error as e:
+    print(f"Ошибка при создании базы данных: {e}")
 finally:
-    if 'conn' in locals():
-        cursor.close()
+    if conn:
         conn.close()
+        
+-- Создаем таблицы 
+%%sql
+
+-- Создание таблицы докторов
+CREATE TABLE IF NOT EXISTS DOCTOR (
+    DOCTOR_ID SERIAL PRIMARY KEY,
+    LAST_NAME VARCHAR(50) NOT NULL,
+    POSITION VARCHAR(50) NOT NULL,
+    EXPERIENCE_YEARS INTEGER NOT NULL CHECK (EXPERIENCE_YEARS >= 0)
+);
+
+-- Создание таблицы пациентов
+CREATE TABLE IF NOT EXISTS PATIENT (
+    PATIENT_ID SERIAL PRIMARY KEY,
+    LAST_NAME VARCHAR(50) NOT NULL,
+    DIAGNOSIS VARCHAR(100),
+    AGE INTEGER NOT NULL CHECK (AGE > 0 AND AGE < 120)
+);
+
+
+CREATE TABLE IF NOT EXISTS Doctor_Patient (
+    DOCTOR_ID INTEGER PRIMARY KEY,
+    PATIENT_ID INTEGER UNIQUE NOT NULL,
+    FOREIGN KEY (DOCTOR_ID) REFERENCES DOCTOR(DOCTOR_ID) ON DELETE CASCADE,
+    FOREIGN KEY (PATIENT_ID) REFERENCES PATIENT(PATIENT_ID) ON DELETE CASCADE
+);
+
+--Заполняем таблицы
+%%sql
+-- Добавление врачей
+INSERT INTO DOCTOR (LAST_NAME, POSITION, EXPERIENCE_YEARS) VALUES
+    ('Иванов', 'Хирург', 10),
+    ('Петрова', 'Терапевт', 5),
+    ('Сидоров', 'Кардиолог', 15),
+    ('Кузнецова', 'Невролог', 8);
+
+-- Добавление пациентов
+INSERT INTO PATIENT (LAST_NAME, DIAGNOSIS, AGE) VALUES
+    ('Смирнов', 'Гастрит', 35),
+    ('Васильев', 'Гипертония', 42),
+    ('Николаева', 'Мигрень', 28),
+    ('Федоров', 'Аппендицит', 19);
+
+-- Соединение 
+INSERT INTO Doctor_Patient (DOCTOR_ID, PATIENT_ID) VALUES
+    (1, 4),  -- Иванов лечит Федорова
+    (2, 1),  -- Петрова лечит Смирнова
+    (3, 2),  -- Сидоров лечит Васильева
+    (4, 3);  -- Кузнецова лечит Николаеву
+        
