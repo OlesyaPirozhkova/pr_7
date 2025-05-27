@@ -16,6 +16,13 @@
 
 
 
+Добавляем таблицу Doctor_Patient с колнками DOCTOR_ID, PATIENT_ID
+
+
+
+![image](https://github.com/user-attachments/assets/a69536a8-0a30-4f58-9abf-da572ac10b6b)
+
+
 2. Создадим er-диаграмму
 
 
