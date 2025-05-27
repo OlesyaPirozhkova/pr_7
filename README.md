@@ -6,7 +6,8 @@
 
 
 
-![image](https://github.com/user-attachments/assets/dbdfa84e-24b1-419b-ad69-93bb2d151246)
+![2025-05-27_23-27-35](https://github.com/user-attachments/assets/fc2b7e51-4e7e-47c6-aa17-3eff42b1caab)
+
 
 
 2. Создадим er-диаграмму
