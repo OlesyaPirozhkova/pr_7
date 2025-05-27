@@ -10,6 +10,12 @@
 
 
 
+
+![image](https://github.com/user-attachments/assets/5990162c-cd9d-4096-b12d-c71266773706)
+
+
+
+
 2. Создадим er-диаграмму
 
 
